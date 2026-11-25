@@ -1,79 +1,26 @@
+SUBDIRS:= $(shell ls | egrep -v '^(CVS)$$')
 
-.SUFFIXES:
+DATESTRING	:=	$(shell date +%Y)$(shell date +%m)$(shell date +%d)
 
-ifeq ($(strip $(DEVKITXENON)),)
-$(error Please set DEVKITXENON)
-endif
+#---------------------------------------------------------------------------------
+all: examples
+#---------------------------------------------------------------------------------
+	@rm -fr bin
+	@mkdir -p bin
+	@find . -name "*.elf32" ! -path "./bin/*" -exec cp -fv {} bin \;
 
-include $(DEVKITXENON)/rules
+examples:
+	@for i in $(SUBDIRS); do if test -e $$i/Makefile ; then $(MAKE) -C $$i || { exit 1;} fi; done;
 
-TARGET := snake360
-BUILD := build
-SOURCES := source
-DATA := data
-INCLUDES :=
-
-CFLAGS = -g -O2 -Wall $(MACHDEP) $(INCLUDE)
-CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
-
-LDFLAGS = -g $(MACHDEP) -Wl,--gc-sections
-
-LIBS := -lSDL -lxenon -lm
-LIBDIRS :=
-
-ifneq ($(BUILD),$(notdir $(CURDIR)))
-
-export OUTPUT := $(CURDIR)/$(TARGET)
-
-export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
-                $(foreach dir,$(DATA),$(CURDIR)/$(dir))
-
-export DEPSDIR := $(CURDIR)/$(BUILD)
-
-CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CPPFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
-sFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-SFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.S)))
-BINFILES := $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*)))
-
-ifeq ($(strip $(CPPFILES)),)
-export LD := $(CC)
-else
-export LD := $(CXX)
-endif
-
-export OFILES := $(addsuffix .o,$(BINFILES)) \
-                 $(CPPFILES:.cpp=.o) $(CFILES:.c=.o) \
-                 $(sFILES:.s=.o) $(SFILES:.S=.o)
-
-export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-                  $(foreach dir,$(LIBDIRS),-I$(dir)/include) \
-                  -I$(CURDIR)/$(BUILD) \
-                  -I$(LIBXENON_INC)
-
-export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
-                   -L$(LIBXENON_LIB)
-
-.PHONY: all clean
-
-all: $(BUILD)
-
-$(BUILD):
-	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-
+#---------------------------------------------------------------------------------
 clean:
-	@echo clean ...
-	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).elf32
+#---------------------------------------------------------------------------------
+	@rm -fr bin
+	@rm -f *.bz2
+	@for i in $(SUBDIRS); do if test -e $$i/Makefile ; then $(MAKE)  -C $$i clean || { exit 1;} fi; done;
 
-else
-
-DEPENDS := $(OFILES:.o=.d)
-
-$(OUTPUT).elf32: $(OUTPUT).elf
-
-$(OUTPUT).elf: $(OFILES)
-
--include $(DEPENDS)
-
-endif
+#---------------------------------------------------------------------------------
+dist: clean
+#---------------------------------------------------------------------------------
+	@rm -fr bin
+	@tar --exclude=.svn --exclude=*CVS* --exclude=.git -cvjf xenon-examples-$(DATESTRING).tar.bz2 *
