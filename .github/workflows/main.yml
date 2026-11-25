@@ -16,8 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Preparar LibXenon
-        run: |
-          docker pull free60/libxenon:latest
+        run: docker pull free60/libxenon:latest
 
       - name: Compilar
         run: |
@@ -30,8 +29,7 @@ jobs:
       - name: Procurar ELF
         run: |
           mkdir -p dist
-          find . -type f -name "*.elf32" -exec cp {} dist/ \;
-          find . -type f -name "*.elf" -exec cp {} dist/ \;
+          find . -type f \( -name "*.elf32" -o -name "*.elf" \) -exec cp {} dist/ \;
           ls -la dist
           test -n "$(ls -A dist)"
 
