@@ -1,0 +1,42 @@
+
+name: Compilar Snake 360
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar LibXenon
+        run: |
+          docker pull free60/libxenon:latest
+
+      - name: Compilar
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/app" \
+            -w /app \
+            free60/libxenon:latest \
+            sh -lc 'export DEVKITXENON=/usr/local/xenon; export PATH="$PATH:$DEVKITXENON/bin:$DEVKITXENON/usr/bin"; make'
+
+      - name: Procurar ELF
+        run: |
+          mkdir -p dist
+          find . -type f -name "*.elf32" -exec cp {} dist/ \;
+          find . -type f -name "*.elf" -exec cp {} dist/ \;
+          ls -la dist
+          test -n "$(ls -A dist)"
+
+      - name: Disponibilizar jogo
+        uses: actions/upload-artifact@v4
+        with:
+          name: Snake360-Xbox360
+          path: dist/
